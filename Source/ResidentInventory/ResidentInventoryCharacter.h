@@ -53,6 +53,9 @@ public:
 	// Constructor
 	AResidentInventoryCharacter();
 
+	// returns if we are still interacting with the object or not
+	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(TimerHandleInteraction); }
+
 protected:
 
 	//=============================================================================
@@ -83,10 +86,26 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	// Interaction Action 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* InteractAction;
+
+	/** Toggle Menu Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ToggleMenuAction;
+
 	// This TScriptInterface is Unreal Interface that lets us implement all functionalities for the UObject that implements an interface
 	// TargetInteractable is the UObject that we are currently interacting with
 	UPROPERTY(VisibleAnywhere, Category = "Character | Interaction")
 	TScriptInterface<IInteractionInterface> TargetInteractable;
+	
+	float InteractionCheckFrequency;
+    
+    float InteractionCheckDistance;    
+
+    FTimerHandle TimerHandleInteraction;
+
+    FInteractionData InteractionData;
 
 	//=============================================================================
 	// FUNCTIONS
@@ -97,6 +116,19 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;	
 	
 	virtual void BeginPlay();
+	
+	// Linetrace to start inetraction
+    void PerformInteractionCheck();
 
+    // If we find any Interactable
+    void FoundInteractable(AActor* NewInteractable);
+    
+    void NoInteractableFound();
+    void BeginInteract();
+    void EndInteract();
+    void Interact();
+	void ToggleMenu();
+
+	virtual void Tick(float DeltaSeconds) override;
 };
 
