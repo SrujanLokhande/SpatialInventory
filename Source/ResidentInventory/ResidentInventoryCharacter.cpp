@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Interfaces/InteractionInterface.h"
+#include "UserInterface/InventorySystemHUD.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -128,6 +129,8 @@ void AResidentInventoryCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	HUDRef = Cast<AInventorySystemHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
 }
 void AResidentInventoryCharacter::Tick(float DeltaSeconds)
 {
@@ -209,7 +212,7 @@ void AResidentInventoryCharacter::FoundInteractable(AActor* NewInteractable)
 	TargetInteractable = NewInteractable;
 
 	// Creates and Updates the HUD from the HUD class
-	//HUDRef->UpdateInteractionWidget(&TargetInteractable->InteractableData);
+	HUDRef->UpdateInteractionWidget(&TargetInteractable->InteractableData);
 
 	// makes the new interactable as the focus
 	TargetInteractable->BeginFocus();
@@ -231,7 +234,7 @@ void AResidentInventoryCharacter::NoInteractableFound()
 		}
 		
 		// hide interaction widget on HUD
-		//HUDRef->HideInteractionWidget();
+		HUDRef->HideInteractionWidget();
 
 		InteractionData.CurrentInteractable = nullptr;
 		TargetInteractable = nullptr;

@@ -7,6 +7,7 @@
 #include "Logging/LogMacros.h"
 #include "ResidentInventoryCharacter.generated.h"
 
+class AInventorySystemHUD;
 class IInteractionInterface;
 class USpringArmComponent;
 class UCameraComponent;
@@ -61,6 +62,8 @@ protected:
 	//=============================================================================
 	// PROPERTIES
 	//=============================================================================
+	UPROPERTY()
+	AInventorySystemHUD* HUDRef;
 
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
