@@ -5,6 +5,9 @@
 
 UItemBase::UItemBase()
 {
+	bIsRotated = false;
+	TopLeftCoordinates = FPoint2D(0, 0);
+	UpdateOccupiedCells();
 }
 
 UItemBase* UItemBase::CreateItemCopy() const
@@ -19,9 +22,69 @@ UItemBase* UItemBase::CreateItemCopy() const
 	ItemCopy->NumericData = this->NumericData;
 	ItemCopy->TextData = this->TextData;
 	ItemCopy->AssetData = this->AssetData;
+
+	// Copy grid-related properties
+	ItemCopy->TopLeftCoordinates = this->TopLeftCoordinates;
+	ItemCopy->bIsRotated = this->bIsRotated;
+	ItemCopy->OccupiedCells = this->OccupiedCells;
+	
 	ItemCopy->bIsCopy = true;
 
 	return ItemCopy;
+}
+
+void UItemBase::Rotate()
+{
+	// Only allow rotation if dimensions are different
+	if (!CanBeRotated())
+	{
+		return;
+	}
+
+	bIsRotated = !bIsRotated;
+    
+	// Swap dimensions
+	const float TempX = NumericData.ItemDimensions.X;
+	NumericData.ItemDimensions.X = NumericData.ItemDimensions.Y;
+	NumericData.ItemDimensions.Y = TempX;
+
+	UpdateOccupiedCells();
+	OnItemRotated.Broadcast();
+}
+
+void UItemBase::ResetRotation()
+{
+	if (bIsRotated)
+	{
+		Rotate();
+	}
+}
+
+bool UItemBase::CanBeRotated() const
+{
+	// Item can be rotated if dimensions are different
+	return NumericData.ItemDimensions.X != NumericData.ItemDimensions.Y;
+}
+
+TArray<FPoint2D> UItemBase::GetOccupiedCells() const
+{
+	return OccupiedCells;
+}
+
+void UItemBase::UpdateOccupiedCells()
+{
+	OccupiedCells.Empty();
+
+	for (int32 X = 0; X < NumericData.ItemDimensions.X; X++)
+	{
+		for (int32 Y = 0; Y < NumericData.ItemDimensions.Y; Y++)
+		{
+			OccupiedCells.Add(FPoint2D(
+				TopLeftCoordinates.X + X,
+				TopLeftCoordinates.Y + Y
+			));
+		}
+	}
 }
 
 void UItemBase::ResetItemFlags()

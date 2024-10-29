@@ -3,13 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/InventoryComponent.h"
 #include "UObject/Object.h"
 #include "ResidentInventory/DataStructure/ItemDataStruct.h"
 #include "ItemBase.generated.h"
 
-/**
- * 
- */
+struct FPoint2D;
+class UInventoryComponent;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnItemRotated);
 UCLASS()
 class RESIDENTINVENTORY_API UItemBase : public UObject
 {
@@ -19,6 +21,9 @@ public:
 	//==========================================================
 	// PROPERTIES
 	//==========================================================
+
+	UPROPERTY()
+	UInventoryComponent* OwningInventory;	
 
 	UPROPERTY(VisibleAnywhere, Category = "ItemData")
 	int32 ItemQuantity;
@@ -45,8 +50,22 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Item")
 	FItemAssetData AssetData;
 
+	// Grid system properties
+	UPROPERTY(VisibleAnywhere, Category = "Item|Grid")
+	FPoint2D TopLeftCoordinates;
+
+	UPROPERTY(VisibleAnywhere, Category = "Item|Grid")
+	TArray<FPoint2D> OccupiedCells;
+
+	UPROPERTY(VisibleAnywhere, Category = "Item|Grid")
+	uint8 bIsRotated:1;
+
 	bool bIsCopy;
-	bool bIsPickup;	
+	bool bIsPickup;
+
+	// Events
+	UPROPERTY(BlueprintAssignable, Category = "Item|Events")
+	FOnItemRotated OnItemRotated;
 
 	//==========================================================
 	// FUNCTIONS
@@ -59,6 +78,19 @@ public:
 
 	// creating a copy of the item
 	UItemBase* CreateItemCopy() const;
+
+	// Grid-related functions
+	UFUNCTION(BlueprintCallable, Category = "Item|Grid")
+	void Rotate();
+
+	UFUNCTION(BlueprintCallable, Category = "Item|Grid")
+	void ResetRotation();
+
+	UFUNCTION(BlueprintPure, Category = "Item|Grid")
+	bool CanBeRotated() const;
+
+	UFUNCTION(BlueprintPure, Category = "Item|Grid")
+	TArray<FPoint2D> GetOccupiedCells() const;
 
 	// making it forceinline creates a copy of this function wherever it is called to reduce function calling times and optimizing
 	// Returns the weight of the whole stack of items
@@ -78,6 +110,8 @@ public:
 	void SetItemQuantity(const int32 NewQuantity);
 
 protected:
+
+	void UpdateOccupiedCells();
 
 	// overloading the == operator to compare the keys inside TArray for array of the items
 	bool operator==(const FName& OtherID) const
