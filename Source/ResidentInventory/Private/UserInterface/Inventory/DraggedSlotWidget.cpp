@@ -3,7 +3,11 @@
 
 #include "UserInterface/Inventory/DraggedSlotWidget.h"
 
+#include "EnhancedInputComponent.h"
+#include "InputAction.h"
 #include "Items/ItemBase.h"
+#include "UserInterface/Inventory/CellWidget.h"
+#include "UserInterface/Inventory/GridWidget.h"
 
 UDraggedSlotWidget::UDraggedSlotWidget(const FObjectInitializer& ObjectInitializer)
 {
@@ -13,15 +17,15 @@ UDraggedSlotWidget::UDraggedSlotWidget(const FObjectInitializer& ObjectInitializ
 void UDraggedSlotWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	// Bind rotation input
-	RotateItemCallback.BindUFunction(this, FName("OnRotateItem"));
+	
+	RotateItemCallback.BindDynamic(this, &ThisClass::OnRotateItem);
 	ListenForInputAction(RotateInputAction, IE_Pressed, true, RotateItemCallback);
 }
 
 void UDraggedSlotWidget::NativeDestruct()
 {
 	Super::NativeDestruct();
+	
 	RotateItemCallback.Unbind();
 }
 
@@ -41,6 +45,10 @@ void UDraggedSlotWidget::OnRotateItem()
 {
 	if (InventorySlot.ItemInstance && InventorySlot.ItemInstance->CanBeRotated())
 	{
+		for (UCellWidget* CellWidget: ParentWidget->CellsWidgets)
+		{
+			CellWidget->SetCellColor(CellWidget->DefaultColor);
+		}
 		InventorySlot.ItemInstance->Rotate();
 		OnRotate();
 	}

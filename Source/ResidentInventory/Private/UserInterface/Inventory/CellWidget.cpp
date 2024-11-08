@@ -3,6 +3,9 @@
 
 #include "UserInterface/Inventory/CellWidget.h"
 
+#include "Blueprint/DragDropOperation.h"
+#include "Items/ItemBase.h"
+#include "UserInterface/Inventory/DraggedSlotWidget.h"
 #include "UserInterface/Inventory/GridWidget.h"
 
 void UCellWidget::SetCellData(const FPoint2D& InCoordinates, float InSize, UGridWidget* InParentWidget)

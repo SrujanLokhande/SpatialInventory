@@ -7,6 +7,7 @@
 #include "Components/InventoryComponent.h"
 #include "DraggedSlotWidget.generated.h"
 
+
 class UGridWidget;
 UCLASS()
 class RESIDENTINVENTORY_API UDraggedSlotWidget : public UUserWidget
@@ -18,7 +19,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "DraggedSlot|Input")
 	FName RotateInputAction;
-
+	
 	UPROPERTY(BlueprintReadOnly, Category = "DraggedSlot")
 	FSlot InventorySlot;
 
@@ -30,6 +31,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DraggedSlot")
 	UItemBase* GetItemReference() const { return InventorySlot.ItemInstance; }
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DraggedSlot")
+	FSlateBrush ValidPlacementColor;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DraggedSlot")
+	FSlateBrush InvalidPlacementColor;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -45,5 +52,5 @@ protected:
 	void OnRotate();
 
 private:
-	FScriptDelegate RotateItemCallback;
+	FOnInputAction  RotateItemCallback;
 };
