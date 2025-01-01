@@ -2,46 +2,69 @@
 
 
 #include "ResidentInventory/Public/Items/ItemBase.h"
+#include "Items/ItemDataStruct.h"
 
 UItemBase::UItemBase()
-{
+{	
 }
 
-UItemBase* UItemBase::CreateItemCopy() const
+void UItemBase::NativeOnConstruct()
 {
-	// creating a new copy
-	UItemBase* ItemCopy = NewObject<UItemBase>(StaticClass());
-	ItemCopy->ID = this->ID;
-	ItemCopy->ItemQuantity = this->ItemQuantity;
-	ItemCopy->ItemRarity = this->ItemRarity;
-	ItemCopy->ItemStatistics = this->ItemStatistics;
-	ItemCopy->ItemType = this->ItemType;
-	ItemCopy->NumericData = this->NumericData;
-	ItemCopy->TextData = this->TextData;
-	ItemCopy->AssetData = this->AssetData;
-	ItemCopy->bIsCopy = true;
-
-	return ItemCopy;
+	Size = Item->Size;
+	bIsRotated = false;
+	SizeInCells = Item->GetSizeInCells();
 }
 
-void UItemBase::ResetItemFlags()
+void UItemBase::Rotate()
 {
-	bIsCopy = false;
-	bIsPickup = false;
-}
-
-void UItemBase::SetItemQuantity(const int32 NewQuantity)
-{
-	if(NewQuantity != ItemQuantity)
+	if (!Item->CanBeRotated())
 	{
-		ItemQuantity = FMath::Clamp(NewQuantity, 0, NumericData.bIsStackable ? NumericData.maxStackSize : 1);
-
-		// if(OwningInventory)
-		// {
-		// 	if(ItemQuantity <= 0)
-		// 	{
-		// 		OwningInventory->RemoveSingleInstanceOfItem(this);
-		// 	}
-		// }
+		return;
 	}
+
+	if (bIsRotated)
+	{
+		Size = Item->Size;
+		bIsRotated = false;
+		SizeInCells = Item->GetSizeInCells();
+
+		NotifyItemRotated();
+		return;
+	}
+
+	SizeInCells.Empty();
+	Size = FPoint2D(Item->Size.Y, Item->Size.X);
+
+	for (const FPoint2D& Point: Item->GetSizeInCells())
+	{
+		SizeInCells.Add(FPoint2D(Point.Y, Point.X));
+	}
+
+	bIsRotated = true;
+	NotifyItemRotated();
 }
+
+bool UItemBase::IsRotated() const
+{
+	return bIsRotated;
+}
+
+void UItemBase::ResetRotation()
+{
+	Size = Item->Size;
+	bIsRotated = false;
+	SizeInCells = Item->GetSizeInCells();
+}
+
+void UItemBase::NotifyItemRotated()
+{
+	OnRotated();
+	OnItemRotated.Broadcast();
+}
+
+
+
+
+
+
+

@@ -7,6 +7,8 @@
 #include "Logging/LogMacros.h"
 #include "ResidentInventoryCharacter.generated.h"
 
+class UItemBase;
+class UInventoryComponent;
 class AInventorySystemHUD;
 class IInteractionInterface;
 class USpringArmComponent;
@@ -57,6 +59,12 @@ public:
 	// returns if we are still interacting with the object or not
 	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(TimerHandleInteraction); }
 
+	FORCEINLINE UInventoryComponent* GetInventory() const { return PlayerInventory; }	
+
+	void UpdateInteractionWidget() const;
+
+	void DropItem(UItemBase* ItemToDrop, const int32 QuantityToDrop);
+
 protected:
 
 	//=============================================================================
@@ -101,6 +109,9 @@ protected:
 	// TargetInteractable is the UObject that we are currently interacting with
 	UPROPERTY(VisibleAnywhere, Category = "Character | Interaction")
 	TScriptInterface<IInteractionInterface> TargetInteractable;
+
+	UPROPERTY(VisibleAnywhere, Category = "Character | Inventory")
+	UInventoryComponent* PlayerInventory;
 	
 	float InteractionCheckFrequency;
     
@@ -116,7 +127,7 @@ protected:
 	void Move(const FInputActionValue& Value);	
 	void Look(const FInputActionValue& Value);	
 	
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;	
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;	
 	
 	virtual void BeginPlay();
 	

@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Components/InventoryComponent.h"
 #include "Interfaces/InteractionInterface.h"
 #include "UserInterface/InventorySystemHUD.h"
 
@@ -52,13 +53,14 @@ AResidentInventoryCharacter::AResidentInventoryCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	// Player inventory setting up
+	PlayerInventory = CreateDefaultSubobject<UInventoryComponent>(TEXT("Player Inventory"));
+
 	// for line trace
 	InteractionCheckFrequency = 0.1;
 	InteractionCheckDistance = 225.f;
 	BaseEyeHeight = 74.0f;
 }
-
-
 void AResidentInventoryCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
@@ -293,6 +295,16 @@ void AResidentInventoryCharacter::Interact()
 void AResidentInventoryCharacter::ToggleMenu()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Toogle Menu Called"));
+}
+
+void AResidentInventoryCharacter::UpdateInteractionWidget() const
+{
+	
+}
+
+void AResidentInventoryCharacter::DropItem(UItemBase* ItemToDrop, const int32 QuantityToDrop)
+{
+	
 }
 
 
