@@ -57,9 +57,7 @@ public:
 	AResidentInventoryCharacter();
 
 	// returns if we are still interacting with the object or not
-	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(TimerHandleInteraction); }
-
-	FORCEINLINE UInventoryComponent* GetInventory() const { return PlayerInventory; }	
+	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(TimerHandleInteraction); }	
 
 	void UpdateInteractionWidget() const;
 
@@ -109,9 +107,6 @@ protected:
 	// TargetInteractable is the UObject that we are currently interacting with
 	UPROPERTY(VisibleAnywhere, Category = "Character | Interaction")
 	TScriptInterface<IInteractionInterface> TargetInteractable;
-
-	UPROPERTY(VisibleAnywhere, Category = "Character | Inventory")
-	UInventoryComponent* PlayerInventory;
 	
 	float InteractionCheckFrequency;
     

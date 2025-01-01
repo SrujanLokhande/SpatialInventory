@@ -137,6 +137,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
 	TArray<FEquipmentSlot> EquipmentSlots;
 
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryEvent OnInventoryUpdated;
+	
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryEvent OnWeightChanged;
+	
 	//=============================================================================
 	// FUNCTIONS
 	//=============================================================================
@@ -248,13 +254,7 @@ protected:
 	FInventoryEvent OnInventoryInitialized;
 
 	UPROPERTY(BlueprintAssignable)	
-	FInventoryEvent OnInventoryUpdated;
-
-	UPROPERTY(BlueprintAssignable)	
 	FInventoryEvent OnInsufficientSpace;
-
-	UPROPERTY(BlueprintAssignable)	
-	FInventoryEvent OnWeightChanged;
 
 	UPROPERTY(BlueprintAssignable)	
 	FInventoryItemEvent OnItemAdded;

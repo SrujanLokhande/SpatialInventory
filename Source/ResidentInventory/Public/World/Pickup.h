@@ -40,8 +40,6 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, Category = "Pickup | Components")
 	UStaticMeshComponent* PickupStaticMesh;	
-
-
 	
 	virtual void BeginPlay() override;
 
