@@ -7,6 +7,8 @@
 #include "Logging/LogMacros.h"
 #include "ResidentInventoryCharacter.generated.h"
 
+class UItemBase;
+class UInventoryComponent;
 class AInventorySystemHUD;
 class IInteractionInterface;
 class USpringArmComponent;
@@ -55,7 +57,11 @@ public:
 	AResidentInventoryCharacter();
 
 	// returns if we are still interacting with the object or not
-	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(TimerHandleInteraction); }
+	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(TimerHandleInteraction); }	
+
+	void UpdateInteractionWidget() const;
+
+	void DropItem(UItemBase* ItemToDrop, const int32 QuantityToDrop);
 
 protected:
 
@@ -116,7 +122,7 @@ protected:
 	void Move(const FInputActionValue& Value);	
 	void Look(const FInputActionValue& Value);	
 	
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;	
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;	
 	
 	virtual void BeginPlay();
 	

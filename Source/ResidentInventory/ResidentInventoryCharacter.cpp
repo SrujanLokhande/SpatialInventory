@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Components/InventoryComponent.h"
 #include "Interfaces/InteractionInterface.h"
 #include "UserInterface/InventorySystemHUD.h"
 
@@ -57,8 +58,6 @@ AResidentInventoryCharacter::AResidentInventoryCharacter()
 	InteractionCheckDistance = 225.f;
 	BaseEyeHeight = 74.0f;
 }
-
-
 void AResidentInventoryCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
@@ -293,6 +292,17 @@ void AResidentInventoryCharacter::Interact()
 void AResidentInventoryCharacter::ToggleMenu()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Toogle Menu Called"));
+	HUDRef->ToggleMenu();
+}
+
+void AResidentInventoryCharacter::UpdateInteractionWidget() const
+{
+	
+}
+
+void AResidentInventoryCharacter::DropItem(UItemBase* ItemToDrop, const int32 QuantityToDrop)
+{
+	
 }
 
 

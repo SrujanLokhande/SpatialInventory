@@ -2,20 +2,34 @@
 
 
 #include "UserInterface/Inventory/SlotWidget.h"
-
 #include "Blueprint/DragDropOperation.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/GridSlot.h"
 #include "Items/ItemBase.h"
+#include "UserInterface/Inventory/CellWidget.h"
+#include "UserInterface/Inventory/DraggedSlotWidget.h"
+#include "UserInterface/Inventory/InventoryPanel.h"
 
-USlotWidget::USlotWidget(const FObjectInitializer& ObjectInitializer)
+USlotWidget::USlotWidget(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	bMouseWasDragging = false;
 }
 
-void USlotWidget::SetSlotData(const FSlot& InInventorySlot, UGridWidget* InParentWidget)
+void USlotWidget::SetSlotData(const FSlot& InInventorySlot, UInventoryPanel* InParentWidget)
 {
 	InventorySlot = InInventorySlot;
 	ParentWidget = InParentWidget;
+	
 	OnSlotDataReceived();
+}
+
+void USlotWidget::NativeOnSlotLeftClick()
+{
+	UE_LOG(LogTemp, Warning, TEXT("NativeOnSlotLeftClick() is called"));
+}
+
+void USlotWidget::NativeOnSlotRightClick()
+{
+	UE_LOG(LogTemp, Warning, TEXT("NativeOnSlotLeftClick() is called"));
 }
 
 FReply USlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -27,13 +41,9 @@ FReply USlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const F
 		SetSlotColor(ClickedColor);
 		NativeOnSlotLeftClick();
 		OnSlotLeftClick();
-        
-		// Setup drag detection
-		TSharedPtr<SWidget> SlotWidget = GetCachedWidget();
-		if (SlotWidget.IsValid())
-		{
-			Reply.DetectDrag(SlotWidget.ToSharedRef(), EKeys::LeftMouseButton);
-		}
+		
+		const TSharedPtr<SWidget> WidgetDetectingDrag = GetCachedWidget();
+		Reply.DetectDrag(WidgetDetectingDrag.ToSharedRef(), EKeys::LeftMouseButton);	
 		return Reply;
 	}
 	else if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
@@ -44,8 +54,11 @@ FReply USlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const F
 		OnSlotRightClick();
 		return FReply::Handled();
 	}
-
-	return FReply::Handled();
+	else
+	{
+		bMouseWasDragging = false;
+		return FReply::Handled();
+	}
 }
 
 FReply USlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -58,6 +71,7 @@ FReply USlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPo
 void USlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+	
 	SetSlotColor(HoveredColor);
 	LastStateColor = HoveredColor;
 }
@@ -65,6 +79,7 @@ void USlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointer
 void USlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseLeave(InMouseEvent);
+	
 	SetSlotColor(DefaultColor);
 	LastStateColor = DefaultColor;
 }
@@ -73,70 +88,82 @@ void USlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPoint
 	UDragDropOperation*& OutOperation)
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
-
+	
 	bMouseWasDragging = true;
+
+	for (USlotWidget* SlotWidget: ParentWidget->SlotsWidgets)
+	{
+		UGridSlot* GridSlot = UWidgetLayoutLibrary::SlotAsGridSlot(SlotWidget);
+		if (GridSlot)
+		{
+			GridSlot->SetLayer(-1);
+		}
+	}
+
 	OnDragStarted();
 
-	// Create dragged slot widget
-	UDraggedSlotWidget* DraggedSlot = CreateWidget<UDraggedSlotWidget>(GetOwningPlayer(), DraggedSlotWidgetClass);
-	if (DraggedSlot)
-	{
-		DraggedSlot->SetDraggedSlotData(InventorySlot, ParentWidget);
-        
-		UDragDropOperation* DragDropOp = NewObject<UDragDropOperation>(GetTransientPackage());
-		DragDropOp->DefaultDragVisual =  DraggedSlot;
-		DragDropOp->Pivot = EDragPivot::TopLeft;
-        
-		OutOperation = DragDropOp;
+	UDraggedSlotWidget* DraggedSlotWidget = CreateWidget<UDraggedSlotWidget>(GetOwningPlayer(), DraggedSlotWidgetClass);
+	check(DraggedSlotWidget != nullptr);
 
-		// Remove item from inventory while dragging
-		ParentWidget->GetInventory()->RemoveItem(InventorySlot.ItemInstance);
-	}
+	DraggedSlotWidget->SetDraggedSlotData(InventorySlot, ParentWidget);
+	DraggedSlotWidget->SetDraggedSlotSize(ParentWidget->Inventory->CellSize);
+
+	UDragDropOperation* DragDropOperation = NewObject<UDragDropOperation>(GetOwningPlayer());
+	check(DragDropOperation != nullptr);
+
+	DragDropOperation->DefaultDragVisual = DraggedSlotWidget;
+	DragDropOperation->Pivot = EDragPivot::TopLeft;
+
+	ParentWidget->Inventory->Slots.Remove(InventorySlot);
+	OutOperation = DragDropOperation;
 }
 
 void USlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
-
+	
 	SetSlotColor(DefaultColor);
 	LastStateColor = DefaultColor;
 
-	UDraggedSlotWidget* DraggedSlot = Cast<UDraggedSlotWidget>(InOperation->DefaultDragVisual);
-	if (DraggedSlot)
+	for (USlotWidget* SlotWidget: ParentWidget->SlotsWidgets)
 	{
-		// Return item to inventory at original position
-		ParentWidget->GetInventory()->AddItem(DraggedSlot->GetItemReference(), InventorySlot.ItemInstance->TopLeftCoordinates);
+		UGridSlot* GridSlot = UWidgetLayoutLibrary::SlotAsGridSlot(SlotWidget);
+		if (GridSlot)
+		{
+			GridSlot->SetLayer(1);
+		}
 	}
 
-	OnDragCancelled();
+	const UDraggedSlotWidget* DraggedSlotWidget = Cast<UDraggedSlotWidget>(InOperation->DefaultDragVisual);
+	ParentWidget->Inventory->Slots.Add(DraggedSlotWidget->InventorySlot);
+
+	OnDragCompleted(true);
 }
 
 bool USlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
-	UDraggedSlotWidget* DraggedSlot = Cast<UDraggedSlotWidget>(InOperation->DefaultDragVisual);
-	if (!DraggedSlot) return false;
+	bMouseWasDragging = false;
 
-	// Handle stacking if items are the same type
-	if (DraggedSlot->GetItemReference()->ID == InventorySlot.ItemInstance->ID &&
-		InventorySlot.ItemInstance->NumericData.bIsStackable)
+	for (UCellWidget* CellWidget: ParentWidget->CellsWidgets)
 	{
-		// Stack items
-		ParentWidget->GetInventory()->StackItemStackOnSlot(
-			FSlot(DraggedSlot->GetItemReference(), DraggedSlot->GetItemReference()->ItemQuantity, ParentWidget->GetInventory()),
-			InventorySlot.ItemInstance->TopLeftCoordinates,
-			DraggedSlot->GetItemReference()->ItemQuantity
-		);
-		return true;
+		CellWidget->SetCellColor(CellWidget->DefaultColor);
 	}
 
-	return false;
-}
+	for (USlotWidget* SlotWidget: ParentWidget->SlotsWidgets)
+	{
+		UGridSlot* GridSlot = UWidgetLayoutLibrary::SlotAsGridSlot(SlotWidget);
+		if (GridSlot)
+		{
+			GridSlot->SetLayer(1);
+		}
+	}
+	
+	const UDraggedSlotWidget* DraggedSlotWidget = Cast<UDraggedSlotWidget>(InOperation->DefaultDragVisual);
+	//ParentWidget->Inventory->Slots.Add(DraggedSlotWidget->InventorySlot);
 
-void USlotWidget::NativeOnSlotLeftClick()
-{
-}
+	ParentWidget->Inventory->StackItemStackOnSlot(DraggedSlotWidget->InventorySlot, InventorySlot.ItemBase->TopLeftCoordinates, DraggedSlotWidget->InventorySlot.Quantity);
 
-void USlotWidget::NativeOnSlotRightClick()
-{
+	OnDragCompleted(false);
+	return true;
 }

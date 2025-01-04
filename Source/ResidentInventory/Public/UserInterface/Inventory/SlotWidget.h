@@ -3,74 +3,90 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GridWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/InventoryComponent.h"
 #include "SlotWidget.generated.h"
 
-class UGridWidget;
-class UDragDropOperation;
 class UDraggedSlotWidget;
-
+class UInventoryPanel;
+/**
+ * 
+ */
 UCLASS()
 class RESIDENTINVENTORY_API USlotWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-	public:
-    USlotWidget(const FObjectInitializer& ObjectInitializer);
+public:
 
-    UPROPERTY(EditDefaultsOnly, Category = "Slot|Appearance")
-    FLinearColor DefaultColor;
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Slot")
+	void SetSlotSize(const float NewSize);
 
-    UPROPERTY(EditDefaultsOnly, Category = "Slot|Appearance")
-    FLinearColor HoveredColor;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Slot|Appearance")
-    FLinearColor ClickedColor;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Slot|Classes")
-    TSubclassOf<UDraggedSlotWidget> DraggedSlotWidgetClass;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Slot")
-    FSlot InventorySlot;
-
-    UPROPERTY(BlueprintReadOnly, Category = "Slot")
-    UGridWidget* ParentWidget;
-
-    void SetSlotData(const FSlot& InInventorySlot, UGridWidget* InParentWidget);
+	UFUNCTION(BlueprintCallable, Category = "Slot")
+	void SetSlotData(const FSlot& InInventorySlot, UInventoryPanel* InParentWidget);
 
 protected:
-    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-    virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-    virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-    virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
-    virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
-    virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
-    virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
-    UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
-    void OnSlotDataReceived();
+	//=============================================================================
+	// PROPERTIES
+	//=============================================================================
 
-    UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
-    void SetSlotColor(const FLinearColor& Color);
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Slot")
+	UInventoryPanel* ParentWidget;
+	
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Slot")
+	FSlot InventorySlot;
 
-    UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
-    void OnDragStarted();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Slot")
+	FSlateBrush DefaultColor;
 
-    UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
-    void OnDragCancelled();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Slot")
+	FSlateBrush HoveredColor;
 
-    UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
-    void OnSlotLeftClick();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Slot")
+	FSlateBrush ClickedColor;
 
-    UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
-    void OnSlotRightClick();
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Slot")
+	FSlateBrush LastStateColor;
 
-    virtual void NativeOnSlotLeftClick();
-    virtual void NativeOnSlotRightClick();
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Slot")
+	uint8 bMouseWasDragging : 1;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Slot")
+	TSubclassOf<UDraggedSlotWidget> DraggedSlotWidgetClass;
 
-private:
-    FLinearColor LastStateColor;
-    bool bMouseWasDragging;
+	//=============================================================================
+	// FUNCTIONS
+	//=============================================================================
+	
+	USlotWidget(const FObjectInitializer& ObjectInitializer);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
+	void OnSlotDataReceived();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Slot")
+	void SetSlotColor(const FSlateBrush& NewColor);
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Slot")
+	void OnDragStarted();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Slot")
+	void OnDragCompleted(bool bCancelled);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
+	void OnSlotRightClick();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Slot")
+	void OnSlotLeftClick();
+	
+	void NativeOnSlotLeftClick();
+	void NativeOnSlotRightClick();	
+	
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
+	virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 };

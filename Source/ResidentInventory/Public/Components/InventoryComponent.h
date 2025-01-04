@@ -1,171 +1,313 @@
 ﻿// Copyright Srujan Lokhande @2024
 
 #pragma once
-
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "ResidentInventory/DataStructure/Point2D.h"
 #include "InventoryComponent.generated.h"
 
+class APickup;
+struct FPoint2D;
+class UItemDataStruct;
 class UInventoryComponent;
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryWeightChanged);
-DECLARE_MULTICAST_DELEGATE(FOnInventoryUpdated);
-
 class UItemBase;
-/**
- * Point2D struct for grid coordinates
- */
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInventoryEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryItemEvent, UItemDataStruct*, ItemDataStruct, int32, Quantity);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInventoryEquipmentEvent, UItemDataStruct*, ItemDataStruct, int32, Quantity);
+
 USTRUCT(BlueprintType)
-struct FPoint2D
+struct RESIDENTINVENTORY_API FSlot
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
-    FPoint2D()
-    {
-        X = 0;
-        Y = 0;
-    }
+	FSlot()
+	{
+		OwnerInventory = nullptr;
+		ItemBase = nullptr;
+		Quantity = 0;
+	}
 
-    FPoint2D(const int32 InX, const int32 InY)
-    {
-        X = InX;
-        Y = InY;
-    }
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = 0, UIMin = 0))
-    int32 X;
+	FSlot(UItemBase* InItemBase, const int32 InQuantity, UInventoryComponent* InOwnerInventory)
+	{
+		OwnerInventory = InOwnerInventory;
+		ItemBase = InItemBase;
+		Quantity = InQuantity;
+	}
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = 0, UIMin = 0))
-    int32 Y;
+	UPROPERTY(BlueprintReadOnly)
+	UItemBase* ItemBase;
 
-    bool operator == (const FPoint2D& Other) const
-    {
-        return Other.X == X && Other.Y == Y;
-    }
+	UPROPERTY(BlueprintReadOnly)
+	int32 Quantity;
 
-    FPoint2D operator + (const FPoint2D& Other) const
-    {
-        return FPoint2D(Other.X + X, Other.Y + Y);
-    }
+	UPROPERTY(BlueprintReadOnly)
+	UInventoryComponent* OwnerInventory;
+	
+
+	bool operator == (const FSlot& Other) const
+	{
+		// instead of this make use of the Item ID
+		return Other.ItemBase == ItemBase && Other.Quantity == Quantity;
+	}
+
+	bool operator != (const FSlot& Other) const
+	{
+		return Other.ItemBase != ItemBase && Other.Quantity != Quantity;
+	}
+	
+	bool IsOnMaxStackSize() const;
+	int32 GetMissingStackQuantity() const;
+
+	void SetQuantity(int32 InQuantity);	
+	void UpdateQuantity(int32 InQuantity);
+
+	bool IsEmpty() const;
+	bool IsOccupied() const;
+	bool IsValid() const;
+	
+};
+
+UENUM(BlueprintType)
+enum class EEquipmentSlotType : uint8
+{
+	None								UMETA(DisplayName = "None"),
+	PrimaryWeapon						UMETA(DisplayName = "PrimaryWeapon"),
+	SecondaryWeapon						UMETA(DisplayName = "SecondaryWeapon"),
+
 };
 
 /**
- * Slot struct for inventory items
+ * Startup Item
  */
+
+// no need of this because we are not using startup items
 USTRUCT(BlueprintType)
-struct FSlot
+struct RESIDENTINVENTORY_API FEquipmentSlot
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
-    FSlot()
-    {
-        OwnerInventory = nullptr;
-        ItemInstance = nullptr;
-        Quantity = 0;
-    }
+	FEquipmentSlot()
+	{
+		Type = EEquipmentSlotType::None;
+		Data = FSlot();
+	}
 
-    FSlot(UItemBase* InItemInstance, const int32 InQuantity, UInventoryComponent* InOwnerInventory)
-    {
-        OwnerInventory = InOwnerInventory;
-        ItemInstance = InItemInstance;
-        Quantity = InQuantity;
-    }
-
-    UPROPERTY(BlueprintReadOnly)
-    UItemBase* ItemInstance;
-
-    UPROPERTY(BlueprintReadOnly)
-    int32 Quantity;
-
-    UPROPERTY(BlueprintReadOnly)
-    UInventoryComponent* OwnerInventory;
-
-    bool IsOnMaxStackSize() const;
-    int32 GetMissingStackQuantity() const;
-    void SetQuantity(int32 InQuantity);
-    void UpdateQuantity(int32 InQuantity);
-    bool IsEmpty() const;
-    bool IsOccupied() const;
-    bool IsValid() const;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EEquipmentSlotType Type;
+	
+	UPROPERTY(BlueprintReadWrite)
+	FSlot Data;
+	
+	bool IsValid() const
+	{
+		return Type != EEquipmentSlotType::None;
+	}
 };
 
-
-
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Abstract, Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class RESIDENTINVENTORY_API UInventoryComponent : public UActorComponent
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
-public:    
-    UInventoryComponent();
+public:
+	
+	//=============================================================================
+	// PROPERTIES
+	//=============================================================================
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	FPoint2D GridSize;
 
-    virtual void BeginPlay() override;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = 1.0f, UIMin = 1.0f), Category = "Inventory")
+	float CellSize;
 
-    // Grid System Functions
-    UFUNCTION(BlueprintPure, Category = "Inventory|Grid")
-    bool IsWithinBoundaries(const FPoint2D& Coordinates) const;
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	TArray<FPoint2D> Cells;
 
-    UFUNCTION(BlueprintPure, Category = "Inventory|Grid")
-    bool IsFreeCell(const FPoint2D& Coordinates);
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	TArray<FSlot> Slots;
 
-    UFUNCTION(BlueprintPure, Category = "Inventory|Grid")
-    bool DoesItemFit(const TArray<FPoint2D>& SizeInCells, const FPoint2D& Coordinates);
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	float CurrentWeight;
 
-    UFUNCTION(BlueprintPure, Category = "Inventory|Grid")
-    FPoint2D GetFreeCell();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = 1.0f, UIMin = 1.0f, EditCondition = "!bUseScaledMaxWeight"), Category = "Inventory")
+	float MaxWeight;
 
-    UFUNCTION(BlueprintPure, Category = "Inventory|Grid")
-    FPoint2D GetFreeCellWhereItemFit(UItemBase* Item);
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	TArray<FEquipmentSlot> EquipmentSlots;
 
-    // Item Management Functions
-    UFUNCTION(BlueprintCallable, Category = "Inventory|Items")
-    bool AddItem(UItemBase* Item, const FPoint2D& Coordinates);
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryEvent OnInventoryUpdated;
+	
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryEvent OnWeightChanged;
+	
+	//=============================================================================
+	// FUNCTIONS
+	//=============================================================================
+	
+	UInventoryComponent();		
 
-    UFUNCTION(BlueprintCallable, Category = "Inventory|Items")
-    bool RemoveItem(UItemBase* Item);
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	UItemBase* CreateItemInstance(TSubclassOf<UItemBase> InItemBaseClass) const;	
 
-    UFUNCTION(BlueprintCallable, Category = "Inventory|Items")
-    bool MoveItem(UItemBase* Item, const FPoint2D& NewCoordinates);
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool IsWithinBoundaries(const FPoint2D& Coordinates) const;
 
-    // Weight System
-    UFUNCTION(BlueprintPure, Category = "Inventory|Weight")
-    bool CanCarryItem(UItemBase* Item) const;
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool IsFreeCell(const FPoint2D& Coordinates);
+	
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool DoesItemFit(const TArray<FPoint2D>& SizeInCells, const FPoint2D& Coordinates);
 
-    UFUNCTION(BlueprintPure, Category = "Inventory|Weight")
-    float GetCurrentWeight() const { return CurrentWeight; }
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	FPoint2D GetFreeCell();
+	
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	FPoint2D GetFreeCellWhereItemCanFit(const TArray<FPoint2D>& SizeInCells);
 
-    UFUNCTION(BlueprintPure, Category = "Inventory|Weight")
-    float GetMaxWeight() const { return MaxWeight; }
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool IsFull() const;
+	
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool DoesItemExist(const UItemDataStruct* InItemDataStruct);
 
-    // Grid Properties
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory|Grid")
-    FPoint2D GridSize;
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 CountItemQuantity(const UItemDataStruct* InItemDataStruct);
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory|Grid")
-    float CellSize;
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	FSlot GetSlotByCoordinates(const FPoint2D& Coordinates);
 
-    UPROPERTY(BlueprintReadOnly, Category = "Inventory|Grid")
-    TArray<FPoint2D> Cells;
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 GetSlotIndexByCoordinates(const FPoint2D& Coordinates);
 
-    UPROPERTY(BlueprintReadOnly, Category = "Inventory|Grid")
-    TArray<FSlot> Slots;
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool CanCarryItem(const UItemDataStruct* InItemDataStruct, const int32 Quantity) const;
 
-    // Weight Properties
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory|Weight")
-    float MaxWeight;
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void Initialize();
+	
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool AddNewItem(UItemDataStruct* InItemDataStruct, int32 Quantity, int32& AddedQuantity);
+	
+	UFUNCTION()
+	bool AddItemExisting(UItemBase* InItemBase, int32 Quantity, int32 AddedQuantity);
+	
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool RemoveItem(UItemDataStruct* InItemDataStruct, int32 Quantity, int32& RemovedQuantity);
 
-    UPROPERTY(BlueprintReadOnly, Category = "Inventory|Weight")
-    float CurrentWeight;
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool RemoveItemOnSlot(const FSlot& Slot, int32 Quantity, int32& RemovedQuantity);
 
-    // Events
-    UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
-    FOnInventoryUpdated OnInventoryUpdated;
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool MoveItemOnSlot(const FSlot& Slot, const FPoint2D& Destination);
 
-    UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
-    FOnInventoryWeightChanged OnWeightChanged;
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void StackItemStackOnSlot(const FSlot& Slot, const FPoint2D& Destination, int32 Quantity);
 
-private:
-    void InitializeGrid();
-    void UpdateWeight();
-    void NotifyInventoryUpdated();
-    void NotifyWeightChanged();
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void EquipItemOnSlot(const FSlot& Slot);
+	
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void UnequipItem(EEquipmentSlotType EquipmentSlot);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool DropItemOnSlot(const FSlot& Slot);
+	
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool HandleAddItem(APickup* Pickup, int32& LootedQuantity);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SpawnItem(const UItemDataStruct* InItemDataStruct, int32 Quantity, const FTransform& Transform);
+
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool IsValidEquipmentSlots();
+
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	FEquipmentSlot GetEquipmentSlotByType(EEquipmentSlotType SlotType);
+
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 GetEquipmentSlotIndexByType(EEquipmentSlotType SlotType);
+
+	void NotifyInventoryInitialized();
+	void NotifyInventoryUpdated();
+	void NotifyInventoryInsufficientSpace();
+	void NotifyInventoryWeightChanged();
+	void NotifyInventoryItemAdded(UItemDataStruct* InItemDataStruct, int32 InQuantity);
+	void NotifyInventoryItemRemoved(UItemDataStruct* InItemDataStruct, int32 InQuantity);
+	void NotifyInventoryItemEquipped(UItemDataStruct* InItemDataStruct, int32 InQuantity);
+	void NotifyInventoryItemUnequipped(UItemDataStruct* InItemDataStruct, int32 InQuantity);
+	void NotifyInventoryItemUsed(UItemDataStruct* InItemDataStruct, int32 InQuantity);
+
+	bool AddExistingItem_Internal(const UItemBase* InItemBase, int32 Quantity, int32& AddedQuantity);	
+
+protected:
+	//=============================================================================
+	// PROPERTIES
+	//=============================================================================
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = 1, UIMin = 1), Category = "Inventory")
+	float PickupSpawnRadiusFromPlayer;
+
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryEvent OnInventoryInitialized;
+
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryEvent OnInsufficientSpace;
+
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryItemEvent OnItemAdded;
+
+	UPROPERTY(BlueprintAssignable)	
+	FInventoryItemEvent OnItemRemoved;
+
+	UPROPERTY(BlueprintAssignable)
+	FInventoryEquipmentEvent OnItemEquipped;
+
+	UPROPERTY(BlueprintAssignable)
+	FInventoryEquipmentEvent OnItemUnequipped;
+
+	UPROPERTY(BlueprintAssignable)
+	FInventoryItemEvent OnItemUsed;
+
+	//=============================================================================
+	// FUNCTIONS
+	//=============================================================================
+	
+	virtual void BeginPlay() override;
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Initialized"), Category = "Inventory")
+	void K2_OnInventoryInitialized();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Money Changed"), Category = "Inventory")
+	void K2_OnMoneyChanged();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Updated"), Category = "Inventory")
+	void K2_OnInventoryUpdated();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Insufficient Space"), Category = "Inventory")
+	void K2_OnInventoryInsufficientSpace();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Weight Changed"), Category = "Inventory")
+	void K2_OnInventoryWeightChanged();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Item Added"), Category = "Inventory")
+	void K2_OnInventoryItemAdded(UItemDataStruct* InItemDataStruct, int32 Quantity);
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Item Removed"), Category = "Inventory")
+	void K2_OnInventoryItemRemoved(UItemDataStruct* InItemDataStruct, int32 Quantity);
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Item Equipped"), Category = "Inventory")
+	void K2_OnInventoryItemEquipped(UItemDataStruct* InItemDataStruct, int32 Quantity);
+	
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Item Unequipped"), Category = "Inventory")
+	void K2_OnInventoryItemUnequipped(UItemDataStruct* InItemDataStruct, int32 Quantity);
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "On Inventory Item Used"), Category = "Inventory")
+	void K2_OnInventoryItemUsed(UItemDataStruct* InItemDataStruct, int32 Quantity);
+	
+	
 };
+
+	

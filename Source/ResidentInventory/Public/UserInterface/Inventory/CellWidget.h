@@ -4,12 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/InventoryComponent.h"
+#include "ResidentInventory/DataStructure/Point2D.h"
 #include "CellWidget.generated.h"
 
-class UGridWidget;
-class UDragDropOperation;
-
+class UInventoryPanel;
+/**
+ * 
+ */
 UCLASS()
 class RESIDENTINVENTORY_API UCellWidget : public UUserWidget
 {
@@ -17,61 +18,72 @@ class RESIDENTINVENTORY_API UCellWidget : public UUserWidget
 
 public:
 
+	UCellWidget(const FObjectInitializer& ObjectInitializer);
+	
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Grid")
+	void SetCellColor(const FSlateBrush& NewColor);
+
+	UFUNCTION(BlueprintCallable, Category = "Cell")
+	void SetCellData(const FPoint2D& InCoordinates, float InSize, UInventoryPanel* InParentWidget);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cell")
+	FSlateBrush DefaultColor;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cell")
+	FPoint2D Coordinates;
+	
+protected:
+	
 	//=============================================================================
 	// PROPERTIES
 	//=============================================================================
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cell")
-	FLinearColor DefaultColor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cell")
-	FLinearColor HoveredColor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cell")
-	FLinearColor ClickedColor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cell")
-	FLinearColor ValidPlacementColor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cell")
-	FLinearColor InvalidPlacementColor;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Cell")
-	FPoint2D Coordinates;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Cell")
+	
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cell")
 	float CellSize;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Cell")
-	UGridWidget* ParentWidget;
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cell")
+	UInventoryPanel* ParentWidget;	
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cell")
+	FSlateBrush HoveredColor;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cell")
+	FSlateBrush ClickedColor;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cell")
+	FSlateBrush LastStateColor;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Cell")
+	uint8 bMouseWasDragging : 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cell")
+	FSlateBrush ValidPlacementColor;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cell")
+	FSlateBrush InvalidPlacementColor;
+
+	UPROPERTY(Transient)
+	UDragDropOperation* CachedDragDropOperation;
 
 	//=============================================================================
 	// FUNCTIONS
-	//=============================================================================
+	//=============================================================================	
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Grid")
+	void OnCellDataReceived();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Grid")
+	void SetCellSize(const float NewSize);
+
+	UFUNCTION()
+	void OnItemRotated();	
 	
-	void SetCellData(const FPoint2D& InCoordinates, float InSize, UGridWidget* InParentWidget);
-
-protected:
-
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
-	virtual void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-		UDragDropOperation* InOperation) override;
+	virtual void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,UDragDropOperation* InOperation) override;
 	virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
-	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-		UDragDropOperation* InOperation) override;
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Cell")
-	void OnCellDataReceived();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Cell")
-	void SetCellColor(const FLinearColor& Color);
-
-private:
-	
-	FLinearColor LastStateColor;
-	bool bMouseWasDragging;
-
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,UDragDropOperation* InOperation) override;
+	virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 };

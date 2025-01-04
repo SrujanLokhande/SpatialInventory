@@ -9,11 +9,8 @@
 
 
 struct FInteractableData;
-struct FItemData;
 class UItemBase;
 class UStaticMeshComponent;
-class UDataTable;
-
 
 UCLASS()
 class RESIDENTINVENTORY_API APickup : public AActor, public IInteractionInterface
@@ -24,45 +21,36 @@ public:
 	// Sets default values for this actor's properties
 	APickup();
 
-	// take the items from the data table during begin play
-	void InitializePickup(const TSubclassOf<UItemBase> BaseClass, int32 ItemQuantity);
-
-	// to initialize the items from the data table to be ready for dropping
-	void InitializeDrop(UItemBase* ItemToDrop, const int32 InQuantity);	
-
 	// getter for the Item
 	FORCEINLINE UItemBase* GetItemData() const { return ItemReference;}
 
 	virtual void BeginFocus() override;
 	virtual void EndFocus() override;
 
+	UFUNCTION(BlueprintCallable, Category = "Pickup")
+	void SetPickupData(UItemBase* InItemInstance, int32 InQuantity);	
+	
+	UPROPERTY(EditInstanceOnly, Category = "Pickup | Item Initialization")
+	int32 PickupItemQuantity;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Pickup | Item Reference")
+	UItemBase* ItemReference;
+	
 protected:
 	
 	UPROPERTY(VisibleAnywhere, Category = "Pickup | Components")
 	UStaticMeshComponent* PickupStaticMesh;	
-
-	// The data table with all the info we give to a specific actor
-	UPROPERTY(EditInstanceOnly, Category = "Pickup | Item Database")
-	UDataTable* ItemDataTable;
-
-	// the ID of the item which can be referenced with the ItemID in the data table to get a specific item
-	UPROPERTY(EditInstanceOnly, Category = "Pickup | Item Database")
-	FName DesiredID;
-
-	UPROPERTY(VisibleAnywhere, Category = "Pickup | Item Reference")
-	UItemBase* ItemReference;
-
-	UPROPERTY(EditInstanceOnly, Category = "Pickup | Item Initialization")
-	int32 PickupItemQuantity;
-
-	UPROPERTY(VisibleInstanceOnly, Category = "Pickup | Interaction")
-	FInteractableData InstanceInteractableData;
 	
 	virtual void BeginPlay() override;
 
 	virtual void Interact(AResidentInventoryCharacter* PlayerCharacter) override;
-	void UpdateInteractableData();
+
 	void TakePickup(const AResidentInventoryCharacter* PickupTaker);
+
+	void OnPickupDataReceived() const;
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnPickupDataReceived"), Category = "Pickup")
+	void K2_OnPickupDataReceived();
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;	

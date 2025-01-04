@@ -2,109 +2,69 @@
 
 
 #include "ResidentInventory/Public/Items/ItemBase.h"
+#include "Items/ItemDataStruct.h"
 
 UItemBase::UItemBase()
-{
-	bIsRotated = false;
-	TopLeftCoordinates = FPoint2D(0, 0);
-	UpdateOccupiedCells();
+{	
 }
 
-UItemBase* UItemBase::CreateItemCopy() const
+void UItemBase::NativeOnConstruct()
 {
-	// creating a new copy
-	UItemBase* ItemCopy = NewObject<UItemBase>(StaticClass());
-	ItemCopy->ID = this->ID;
-	ItemCopy->ItemQuantity = this->ItemQuantity;
-	ItemCopy->ItemRarity = this->ItemRarity;
-	ItemCopy->ItemStatistics = this->ItemStatistics;
-	ItemCopy->ItemType = this->ItemType;
-	ItemCopy->NumericData = this->NumericData;
-	ItemCopy->TextData = this->TextData;
-	ItemCopy->AssetData = this->AssetData;
-
-	// Copy grid-related properties
-	ItemCopy->TopLeftCoordinates = this->TopLeftCoordinates;
-	ItemCopy->bIsRotated = this->bIsRotated;
-	ItemCopy->OccupiedCells = this->OccupiedCells;
-	
-	ItemCopy->bIsCopy = true;
-
-	return ItemCopy;
+	Size = Item->Size;
+	bIsRotated = false;
+	SizeInCells = Item->GetSizeInCells();
 }
 
 void UItemBase::Rotate()
 {
-	// Only allow rotation if dimensions are different
-	if (!CanBeRotated())
+	if (!Item->CanBeRotated())
 	{
 		return;
 	}
 
-	bIsRotated = !bIsRotated;
-    
-	// Swap dimensions
-	const float TempX = NumericData.ItemDimensions.X;
-	NumericData.ItemDimensions.X = NumericData.ItemDimensions.Y;
-	NumericData.ItemDimensions.Y = TempX;
+	if (bIsRotated)
+	{
+		Size = Item->Size;
+		bIsRotated = false;
+		SizeInCells = Item->GetSizeInCells();
 
-	UpdateOccupiedCells();
-	OnItemRotated.Broadcast();
+		NotifyItemRotated();
+		return;
+	}
+
+	SizeInCells.Empty();
+	Size = FPoint2D(Item->Size.Y, Item->Size.X);
+
+	for (const FPoint2D& Point: Item->GetSizeInCells())
+	{
+		SizeInCells.Add(FPoint2D(Point.Y, Point.X));
+	}
+
+	bIsRotated = true;
+	NotifyItemRotated();
+}
+
+bool UItemBase::IsRotated() const
+{
+	return bIsRotated;
 }
 
 void UItemBase::ResetRotation()
 {
-	if (bIsRotated)
-	{
-		Rotate();
-	}
+	Size = Item->Size;
+	bIsRotated = false;
+	SizeInCells = Item->GetSizeInCells();
 }
 
-bool UItemBase::CanBeRotated() const
+void UItemBase::NotifyItemRotated()
 {
-	// Item can be rotated if dimensions are different
-	return NumericData.ItemDimensions.X != NumericData.ItemDimensions.Y;
+	OnRotated();
+	OnItemRotated.Broadcast();
 }
 
-TArray<FPoint2D> UItemBase::GetOccupiedCells() const
-{
-	return OccupiedCells;
-}
 
-void UItemBase::UpdateOccupiedCells()
-{
-	OccupiedCells.Empty();
 
-	for (int32 X = 0; X < NumericData.ItemDimensions.X; X++)
-	{
-		for (int32 Y = 0; Y < NumericData.ItemDimensions.Y; Y++)
-		{
-			OccupiedCells.Add(FPoint2D(
-				TopLeftCoordinates.X + X,
-				TopLeftCoordinates.Y + Y
-			));
-		}
-	}
-}
 
-void UItemBase::ResetItemFlags()
-{
-	bIsCopy = false;
-	bIsPickup = false;
-}
 
-void UItemBase::SetItemQuantity(const int32 NewQuantity)
-{
-	if(NewQuantity != ItemQuantity)
-	{
-		ItemQuantity = FMath::Clamp(NewQuantity, 0, NumericData.bIsStackable ? NumericData.maxStackSize : 1);
 
-		// if(OwningInventory)
-		// {
-		// 	if(ItemQuantity <= 0)
-		// 	{
-		// 		OwningInventory->RemoveSingleInstanceOfItem(this);
-		// 	}
-		// }
-	}
-}
+

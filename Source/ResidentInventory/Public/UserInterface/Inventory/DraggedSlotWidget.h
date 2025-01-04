@@ -7,30 +7,37 @@
 #include "Components/InventoryComponent.h"
 #include "DraggedSlotWidget.generated.h"
 
-
-class UGridWidget;
+class UInventoryPanel;
+/**
+ * 
+ */
 UCLASS()
 class RESIDENTINVENTORY_API UDraggedSlotWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	UDraggedSlotWidget(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY(EditDefaultsOnly, Category = "DraggedSlot|Input")
-	FName RotateInputAction;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "DraggedSlot")
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "DraggedSlot")
 	FSlot InventorySlot;
 
-	UPROPERTY(BlueprintReadOnly, Category = "DraggedSlot")
-	UGridWidget* ParentWidget;
+	UFUNCTION(BlueprintCallable, Category = "DraggedSlot")
+	void SetDraggedSlotData(const FSlot& InSlot, UInventoryPanel* InParentWidget);
 
-	void SetDraggedSlotData(const FSlot& InSlot, UGridWidget* InParentWidget);
-	void SetDraggedSlotSize(float Size);
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "DraggedSlot")
+	void SetDraggedSlotSize(float NewSize);
 
-	UFUNCTION(BlueprintPure, Category = "DraggedSlot")
-	UItemBase* GetItemReference() const { return InventorySlot.ItemInstance; }
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "DraggedSlot")
+	UInventoryPanel* ParentWidget;
+	
+protected:
+
+	//=============================================================================
+	// PROPERTIES
+	//=============================================================================
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DraggedSlot")
+	FName RotateInputAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DraggedSlot")
 	FSlateBrush ValidPlacementColor;
@@ -38,19 +45,24 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DraggedSlot")
 	FSlateBrush InvalidPlacementColor;
 
-protected:
-	virtual void NativeConstruct() override;
-	virtual void NativeDestruct() override;
+	FOnInputAction RotateItemCallback;
 
+	//=============================================================================
+	// FUNCTIONS
+	//=============================================================================
+
+	UDraggedSlotWidget(const FObjectInitializer& ObjectInitializer);
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "DraggedSlot")
+	void OnDraggedSlotDataReceived();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "DraggedSlot")
+	void OnRotate();	
+	
 	UFUNCTION()
 	void OnRotateItem();
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "DraggedSlot")
-	void OnDraggedSlotDataReceived();
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;	
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "DraggedSlot")
-	void OnRotate();
-
-private:
-	FOnInputAction  RotateItemCallback;
 };
