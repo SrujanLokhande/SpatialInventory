@@ -5,7 +5,7 @@
 
 #include "Components/InventoryComponent.h"
 
-UGridWidget::UGridWidget(const FObjectInitializer& ObjectInitializer)
+UGridWidget::UGridWidget(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
 
