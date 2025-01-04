@@ -292,6 +292,7 @@ void AResidentInventoryCharacter::Interact()
 void AResidentInventoryCharacter::ToggleMenu()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Toogle Menu Called"));
+	HUDRef->ToggleMenu();
 }
 
 void AResidentInventoryCharacter::UpdateInteractionWidget() const

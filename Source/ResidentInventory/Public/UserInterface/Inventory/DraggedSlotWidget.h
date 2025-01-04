@@ -27,14 +27,14 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "DraggedSlot")
 	void SetDraggedSlotSize(float NewSize);
 
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "DraggedSlot")
+	UInventoryPanel* ParentWidget;
+	
 protected:
 
 	//=============================================================================
 	// PROPERTIES
 	//=============================================================================
-
-	UPROPERTY(Transient, BlueprintReadOnly, Category = "DraggedSlot")
-	UInventoryPanel* ParentWidget;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DraggedSlot")
 	FName RotateInputAction;
